@@ -1,0 +1,6 @@
+
+Install ascp
+
+## https://yetu.fun/post/be84278b.html
+## https://github.com/IBM/aspera-cli
+## https://raw.githubusercontent.com/IBM/aspera-cli/refs/heads/main/docs/sdk_location.yaml
