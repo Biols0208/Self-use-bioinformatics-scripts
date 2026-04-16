@@ -1,8 +1,8 @@
-#!/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mambaforge/bin/python
+#!/01_soft/mambaforge/bin/python
 import os
 import sys
 import getopt
-sys.path.append('/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mambaforge/lib/python3.10/site-packages/')
+sys.path.append('/01_soft/mambaforge/lib/python3.10/site-packages/')
 
 import pandas as pd
 import numpy as np
@@ -34,7 +34,7 @@ def find_sdr_candidates(file_path):
         sys.exit(1)
 
     # 1. 筛选显著位点
-    # 我们关心的是 |Diff| > 阈值 的点
+    # 关心的是 |Diff| > 阈值 的点
     sig_df = df[df['Het_Diff'].abs() >= DIFF_THRESHOLD].copy()
     
     if sig_df.empty:
