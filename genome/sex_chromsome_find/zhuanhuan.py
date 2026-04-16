@@ -1,4 +1,4 @@
-#! /dellfsqd2/ST_OCEAN/USER/lishuo1/01_software/miniconda3/bin/python3
+#! /01_software/miniconda3/bin/python3
 import sys
 import csv
 
