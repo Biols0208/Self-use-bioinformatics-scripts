@@ -1,7 +1,7 @@
-#!/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mamba/envs/R-4.2/bin/Rscript
+#!/R-4.2/bin/Rscript
 
 ### choose libPaths ###
-.libPaths("/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mamba/envs/R-4.2/lib/R/library/")
+.libPaths("/R-4.2/lib/R/library/")
 
 args <- commandArgs (T)
 library(CMplot)
