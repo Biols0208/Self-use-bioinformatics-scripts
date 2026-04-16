@@ -1,8 +1,8 @@
-#!/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mambaforge/bin/python
+#!/01_soft/mambaforge/bin/python
 import os
 import sys
 import getopt
-sys.path.append('/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mambaforge/lib/python3.10/site-packages/')
+sys.path.append('/01_soft/mambaforge/lib/python3.10/site-packages/')
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -81,7 +81,7 @@ print(candidates.head())
 # ================= 简单的绘图 (Manhattan style) =================
 print("\n正在绘图...")
 
-# 为了画图，如果染色体不是数字，我们需要把它们转为分类索引
+# 为了画图，如果染色体不是数字，需要把它们转为分类索引
 merged['CHR_Code'] = pd.factorize(merged['CHR'])[0]
 
 plt.figure(figsize=(15, 6))
