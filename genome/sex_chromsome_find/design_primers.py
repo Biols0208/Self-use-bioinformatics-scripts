@@ -1,8 +1,8 @@
-#!/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mambaforge/bin/python
+#!/01_soft/mambaforge/bin/python
 import os
 import sys
 import getopt
-sys.path.append('/dellfsqd2/ST_OCEAN/USER/lishuo11/01_soft/mambaforge/lib/python3.10/site-packages/')
+sys.path.append('/01_soft/mambaforge/lib/python3.10/site-packages/')
 
 import pandas as pd
 import pysam
