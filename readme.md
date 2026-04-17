@@ -14,28 +14,28 @@ The main creators include:
   
   <tr>
     <td>李硕</td>
-    <td>Biols</td>
+    <td>Biols0208</td>
     <td>shiyeyishang@outlook.com</td>
     <td>https://bioinformls.com  https://www.researchgate.net/profile/Shuo_Li37 </td>
   </tr>
 
   <tr>
     <td>十七岁天菜少年</td>
-    <td></td>
+    <td>RISHINNN</td>
     <td>18137879861@163.com</td>
     <td></td>
   </tr>
 
   <tr>
     <td>韩圣磊</td>
-    <td>han sheng lei</td>
+    <td>hanshenglei</td>
     <td>17860712133@163.com</td>
     <td></td>
   </tr>
 
   <tr>
     <td>越来越好</td>
-    <td>better</td>
+    <td>sohojiang</td>
     <td>2274187363@qq.com</td>
     <td></td>
   </tr>
