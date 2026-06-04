@@ -96,11 +96,11 @@ GENE_QUERY=""
 GENE_TAXON=""
 
 # explicit bins (optional)
-DATASETS_PATH="/ldfsqd1/ST_OCEAN/USER/c-lishuo/00_tools/datasets"
-DATAFORMAT_PATH="/ldfsqd1/ST_OCEAN/USER/c-lishuo/00_tools/dataformat"
+DATASETS_PATH=""
+DATAFORMAT_PATH=""
 
 # api key (optional)
-API_KEY="a99aaa85c59305e417219ef841f5fff89408"
+API_KEY=""
 
 # parse options (common + subcommand-specific)
 while [[ $# -gt 0 ]]; do
