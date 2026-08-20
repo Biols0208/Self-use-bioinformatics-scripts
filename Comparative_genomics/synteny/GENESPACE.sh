@@ -4,8 +4,8 @@
 # =========================================================================
 
 # ================= 配置 =================
-IN_DIR="/dellfsqd1/ST_OCEAN/C_OCEAN/USERS/c-lishuo/06_project/06_sex/Sparidae/genespace"
-SIF_PATH="/ldfsqd1/ST_OCEAN/USER/c-lishuo/01_soft/singularity/genespace.sif"
+IN_DIR="/genespace"
+SIF_PATH="/01_soft/singularity/genespace.sif"
 
 # 是否跳过已完成的 OrthoFinder（设为 true 则使用已有结果）
 SKIP_ORTHOFINDER=true
@@ -91,8 +91,8 @@ else
         ${SIF_PATH} \
         orthofinder \
             -f /input/peptide \
-            -t 66 \
-            -a 66 \
+            -t 48 \
+            -a 48 \
             -X \
             -o /input/orthofinder_temp
     
