@@ -1,0 +1,289 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%labels
+    Author Shuo-Li
+    Description "Self-contained PASApipeline-turbo annotation environment"
+    Base ubuntu:20.04
+    PASApipeline-turbo.commit dac9c6956d207aaf594a54d399fc519d09c9168e
+    TransDecoder.version 5.5.0
+    GMAP.version 2021-08-25
+    pblat.version 2.5
+    minimap2.version 2.22
+    FASTA36.version 36.3.8h
+    UniVec.downloaded 2026-09-10
+
+%post
+    set -eu
+
+    export DEBIAN_FRONTEND=noninteractive
+    export TZ=UTC
+    export BUILD_DIR=/opt/pasa-build
+    export INSTALL_BIN=/usr/local/bin
+    export BUILD_JOBS="$(nproc)"
+
+    mkdir -p "$BUILD_DIR" "$INSTALL_BIN" /usr/local/share/minimap2
+
+    # ------------------------------------------------------------
+    # System, compiler, Perl, database and runtime dependencies
+    # ------------------------------------------------------------
+    apt-get update
+    apt-get install --yes --no-install-recommends \
+        ca-certificates \
+        netbase \
+        curl \
+        wget \
+        git \
+        build-essential \
+        gcc \
+        gcc-multilib \
+        g++ \
+        make \
+        pkg-config \
+        perl \
+        cpanminus \
+        python3 \
+        gawk \
+        gzip \
+        bzip2 \
+        xz-utils \
+        unzip \
+        zlib1g-dev \
+        libbz2-dev \
+        liblzma-dev \
+        libssl-dev \
+        libcurl4-openssl-dev \
+        libdb-dev \
+        libgd-dev \
+        libgd-gd2-perl \
+        libdbi-perl \
+        libdbd-sqlite3-perl \
+        libdbd-mysql-perl \
+        liburi-perl \
+        libjson-perl \
+        libxml-parser-perl \
+        libparallel-forkmanager-perl \
+        libfile-which-perl \
+        sqlite3 \
+        default-mysql-client \
+        ncbi-blast+ \
+        samtools \
+        lighttpd
+
+    # These are the Perl modules explicitly required by the upstream PASA
+    # container. Use the Ubuntu packages above first and CPAN only as fallback.
+    if ! perl -MDB_File -MURI::Escape -MGD -MDBI -MDBD::SQLite -e 1; then
+        cpanm --notest DB_File URI::Escape GD DBI DBD::SQLite
+    fi
+
+    # Singularity tries to add the calling user to these files at runtime.
+    # Normal Ubuntu images already contain them; keep valid root-only fallbacks
+    # for builders that accidentally omit them while converting OCI layers.
+    if [ ! -s /etc/passwd ]; then
+        printf 'root:x:0:0:root:/root:/bin/bash\n' > /etc/passwd
+    fi
+    if [ ! -s /etc/group ]; then
+        printf 'root:x:0:\n' > /etc/group
+    fi
+
+    # NCBI UniVec database used by seqclean. Keeping it inside the image removes
+    # the final dependency on the previous cluster's Clean-fasta directory.
+    mkdir -p /opt/pasa-data
+    curl --fail --location --retry 5 --retry-delay 5 \
+        https://ftp.ncbi.nlm.nih.gov/pub/UniVec/UniVec \
+        -o /opt/pasa-data/UniVec
+    test -s /opt/pasa-data/UniVec
+
+    # ------------------------------------------------------------
+    # GMAP/GSNAP 2021-08-25
+    # ------------------------------------------------------------
+    cd "$BUILD_DIR"
+    wget --tries=5 --timeout=60 \
+        -O gmap-gsnap-2021-08-25.tar.gz \
+        http://research-pub.gene.com/gmap/src/gmap-gsnap-2021-08-25.tar.gz
+    tar --no-same-owner -xzf gmap-gsnap-2021-08-25.tar.gz
+    cd gmap-2021-08-25
+    ./configure --prefix=/usr/local
+    make -j "$BUILD_JOBS"
+    make install
+
+    # ------------------------------------------------------------
+    # UCSC BLAT, x86_64 binary
+    # ------------------------------------------------------------
+    curl --fail --location --retry 5 --retry-delay 5 \
+        http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat \
+        -o "$INSTALL_BIN/blat"
+    chmod 0755 "$INSTALL_BIN/blat"
+
+    # ------------------------------------------------------------
+    # pblat 2.5
+    # ------------------------------------------------------------
+    cd "$BUILD_DIR"
+    git clone --branch 2.5 --depth 1 \
+        https://gh-proxy.com/github.com/icebert/pblat.git pblat-2.5
+    cd pblat-2.5
+    make -j "$BUILD_JOBS"
+    install -m 0755 pblat "$INSTALL_BIN/pblat"
+
+    # ------------------------------------------------------------
+    # minimap2 2.22, including k8 and paftools.js
+    # ------------------------------------------------------------
+    cd "$BUILD_DIR"
+    wget --tries=5 --timeout=60 \
+        -O minimap2-2.22_x64-linux.tar.bz2 \
+        https://gh-proxy.com/github.com/lh3/minimap2/releases/download/v2.22/minimap2-2.22_x64-linux.tar.bz2
+    tar --no-same-owner -xjf minimap2-2.22_x64-linux.tar.bz2
+    install -m 0755 minimap2-2.22_x64-linux/minimap2 "$INSTALL_BIN/minimap2"
+    install -m 0755 minimap2-2.22_x64-linux/k8 "$INSTALL_BIN/k8"
+    install -m 0644 minimap2-2.22_x64-linux/paftools.js \
+        /usr/local/share/minimap2/paftools.js
+    ln -sf /usr/local/share/minimap2/paftools.js "$INSTALL_BIN/paftools.js"
+
+    # ------------------------------------------------------------
+    # FASTA36 36.3.8h; PASA expects the command name "fasta"
+    # ------------------------------------------------------------
+    cd "$BUILD_DIR"
+    git clone --branch v36.3.8h_04-May-2020 --depth 1 \
+        https://gh-proxy.com/github.com/wrpearson/fasta36.git fasta36-36.3.8h
+    cd fasta36-36.3.8h/src
+    make -f ../make/Makefile.linux_sse2 all
+    install -m 0755 ../bin/fasta36 "$INSTALL_BIN/fasta"
+
+    # ------------------------------------------------------------
+    # PASApipeline-turbo
+    # ------------------------------------------------------------
+    cd /opt
+
+    # Clone command requested by the user.
+    git clone https://gh-proxy.com/github.com/xiekunwhy/PASApipeline-turbo.git
+    cd /opt/PASApipeline-turbo
+
+    # Pin the inspected revision so rebuilding the definition gives the same
+    # PASA source. Remove this line only when deliberately following master.
+    git checkout dac9c6956d207aaf594a54d399fc519d09c9168e
+
+    # The repository pins this submodule to TransDecoder v5.5.0.
+    # Redirect it through the same GitHub proxy before downloading.
+    git submodule init pasa-plugins/transdecoder
+    git config submodule.pasa-plugins/transdecoder.url \
+        https://gh-proxy.com/github.com/TransDecoder/TransDecoder.git
+    git submodule update --recursive pasa-plugins/transdecoder
+
+    make -j "$BUILD_JOBS"
+
+    chmod 0755 Launch_PASA_pipeline.pl
+    find scripts misc_utilities -type f \
+        \( -name '*.pl' -o -name '*.py' -o -name '*.dbi' -o -name '*.sh' \) \
+        -exec chmod 0755 {} +
+    chmod 0755 pasa-plugins/transdecoder/TransDecoder.LongOrfs \
+               pasa-plugins/transdecoder/TransDecoder.Predict
+
+    # Make the main commands directly discoverable while PASAHOME still points
+    # to the complete, immutable turbo installation tree.
+    cp -f bin/* "$INSTALL_BIN/"
+    ln -sf /opt/PASApipeline-turbo/Launch_PASA_pipeline.pl \
+        "$INSTALL_BIN/Launch_PASA_pipeline.pl"
+    ln -sf /opt/PASApipeline-turbo/pasa-plugins/transdecoder/TransDecoder.LongOrfs \
+        "$INSTALL_BIN/TransDecoder.LongOrfs"
+    ln -sf /opt/PASApipeline-turbo/pasa-plugins/transdecoder/TransDecoder.Predict \
+        "$INSTALL_BIN/TransDecoder.Predict"
+
+    # Record the exact installed source revisions independently of Git output.
+    git rev-parse HEAD > /opt/PASApipeline-turbo/PASA_TURBO_COMMIT.txt
+    git -C pasa-plugins/transdecoder rev-parse HEAD \
+        > /opt/PASApipeline-turbo/TRANSDECODER_COMMIT.txt
+
+    apt-get clean
+    rm -rf /var/lib/apt/lists/* "$BUILD_DIR"
+
+%environment
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export TZ=UTC
+    export TERM="${TERM:-dumb}"
+    export PASAHOME=/opt/PASApipeline-turbo
+    export PASAPIPELINE=/opt/PASApipeline-turbo
+    export PERL5LIB=/opt/PASApipeline-turbo/PerlLib
+    export PATH=/opt/PASApipeline-turbo:/opt/PASApipeline-turbo/scripts:/opt/PASApipeline-turbo/misc_utilities:/opt/PASApipeline-turbo/bin:/opt/PASApipeline-turbo/pasa-plugins/transdecoder:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+
+%runscript
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export TZ=UTC
+    export TERM="${TERM:-dumb}"
+    export PASAHOME=/opt/PASApipeline-turbo
+    export PASAPIPELINE=/opt/PASApipeline-turbo
+    export PERL5LIB=/opt/PASApipeline-turbo/PerlLib
+    export PATH=/opt/PASApipeline-turbo:/opt/PASApipeline-turbo/scripts:/opt/PASApipeline-turbo/misc_utilities:/opt/PASApipeline-turbo/bin:/opt/PASApipeline-turbo/pasa-plugins/transdecoder:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+    exec /opt/PASApipeline-turbo/Launch_PASA_pipeline.pl "$@"
+
+%test
+    set -eu
+
+    export PASAHOME=/opt/PASApipeline-turbo
+    export PASAPIPELINE=/opt/PASApipeline-turbo
+    export PERL5LIB=/opt/PASApipeline-turbo/PerlLib
+    export PATH=/opt/PASApipeline-turbo:/opt/PASApipeline-turbo/scripts:/opt/PASApipeline-turbo/misc_utilities:/opt/PASApipeline-turbo/bin:/opt/PASApipeline-turbo/pasa-plugins/transdecoder:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+
+    test -s /etc/passwd
+    test -s /etc/group
+    test -x "$PASAHOME/Launch_PASA_pipeline.pl"
+    test -x "$PASAHOME/bin/pasa"
+    test -s /opt/pasa-data/UniVec
+    test "$(cat "$PASAHOME/PASA_TURBO_COMMIT.txt")" = \
+        dac9c6956d207aaf594a54d399fc519d09c9168e
+    test "$(cat "$PASAHOME/TRANSDECODER_COMMIT.txt")" = \
+        3c77d07564997c2884634421a432b4412bfad933
+
+    perl -MDB_File -MURI::Escape -MGD -MDBI -MDBD::SQLite \
+        -e 'print "PASA Perl modules: OK\n"'
+
+    for program in \
+        perl python3 \
+        sqlite3 mysql \
+        Launch_PASA_pipeline.pl \
+        gmap gmap_build \
+        blat pblat minimap2 k8 \
+        fasta samtools \
+        blastn blastp makeblastdb \
+        TransDecoder.LongOrfs TransDecoder.Predict
+    do
+        command -v "$program" >/dev/null
+    done
+
+    TransDecoder.LongOrfs --version
+    blastn -version
+    samtools --version | head -n 1
+
+%help
+    Self-contained PASApipeline-turbo image.
+
+    No software paths from the build host are required at runtime. Only input,
+    output and optional database/configuration directories need to be bound.
+
+    Build:
+      apptainer build PASApipeline-turbo.sif PASApipeline-turbo.def
+      # or:
+      singularity build PASApipeline-turbo.sif PASApipeline-turbo.def
+
+    Build without root when fakeroot is configured:
+      apptainer build --fakeroot PASApipeline-turbo.sif PASApipeline-turbo.def
+
+    Inspect the environment:
+      apptainer exec --cleanenv PASApipeline-turbo.sif bash -lc \
+        'echo "$PASAHOME"; command -v gmap pblat minimap2 blastn samtools'
+
+    Example SQLite run:
+      apptainer exec --cleanenv \
+        --bind /absolute/project/path:/work \
+        PASApipeline-turbo.sif \
+        Launch_PASA_pipeline.pl \
+        -c /work/pasa.alignAssembly.txt \
+        -C -R \
+        -g /work/genome.fa \
+        -t /work/transcripts.fa \
+        --ALIGNERS gmap,blat \
+        --CPU 16
+
+    The turbo fork defaults to SQLite. MySQL client libraries and Perl drivers
+    are installed for connecting to an external MySQL server when required.
