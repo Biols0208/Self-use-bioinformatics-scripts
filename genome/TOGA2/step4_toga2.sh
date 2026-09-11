@@ -8,7 +8,7 @@ chain_file=$PWD/make_lastz_chains_out/ref.qur.allfilled.chain
 ref_annotation=$PWD/prepare_data/filter.rename.transcripts.bed
 isoform_file=$PWD/prepare_data/filter.toga.isoforms.tsv
 
-SIF=/ldfsqd1/ST_OCEAN/USER/c-lishuo/01_soft/singularity/toga2.sif
+SIF=/01_soft/singularity/toga2.sif
 OUT=$PWD/final_result_toga
 TMP=$PWD/tmp_toga
 
@@ -17,8 +17,6 @@ rm -rf "${OUT}"
 
 SINGULARITYENV_TMPDIR="${TMP}" \
 singularity exec \
-    --bind "/ldfsqd1/:/ldfsqd1/" \
-    --bind "/dellfsqd1/:/dellfsqd1/" \
     ${SIF} \
     toga2.py run \
     --ref_2bit ${ref_2bit} \
