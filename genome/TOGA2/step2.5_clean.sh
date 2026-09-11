@@ -1,0 +1,1 @@
+rm -rf work/ make_lastz_chains_out/00_genome_prep/qur make_lastz_chains_out/00_genome_prep/ref make_lastz_chains_out/01_partition make_lastz_chains_out/02_lastz_psl make_lastz_chains_out/04_axtchain make_lastz_chains_out/05_filled_chains make_lastz_chains_out/06_cleaned_chains make_lastz_chains_out/pipeline_info
