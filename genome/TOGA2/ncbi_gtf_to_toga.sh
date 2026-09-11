@@ -19,8 +19,8 @@ tx_map="${prefix}.transcript_toga_name.tsv"
 out_bed="${prefix}.toga.transcripts.bed"
 out_iso="${prefix}.toga.isoforms.tsv"
 
-gtfToGenePred="/ldfsqd1/ST_OCEAN/USER/c-lishuo/00_tools/env.sh /ldfsqd1/ /ldfsqd1/ST_OCEAN/USER/c-lishuo/01_soft/singularity/ubuntu.24.04.sif /ldfsqd1/ST_OCEAN/USER/c-lishuo/09_test/AH_toga/gtfToGenePred"
-genePredToBed="/ldfsqd1/ST_OCEAN/USER/c-lishuo/00_tools/env.sh /ldfsqd1/ /ldfsqd1/ST_OCEAN/USER/c-lishuo/01_soft/singularity/ubuntu.24.04.sif /ldfsqd1/ST_OCEAN/USER/c-lishuo/09_test/AH_toga/genePredToBed"
+gtfToGenePred="/soft/gtfToGenePred"
+genePredToBed="/soft/genePredToBed"
 
 echo "========================================"
 echo "NCBI GTF -> TOGA input"
